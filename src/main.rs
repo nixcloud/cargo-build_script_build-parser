@@ -2,17 +2,23 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+enum Command {
+    RustcCfg,
+    RustcCheckCfg,
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 6 {
-        eprintln!("Usage: parse-build --tool <tool> --command <command> <file_path>");
-        println!("{}", args.len());
+        eprintln!("Usage: parse-build --tool <tool> --command <command> <file_path>\n\
+                   Supported commands: {}",
+                 Command::variants());
         std::process::exit(1);
     }
 
     let tool = &args[2];
-    let command = &args[4];
+    let command_str = &args[4];
     let file_path = PathBuf::from(&args[5]);
 
     if tool != "cargo" {
@@ -20,35 +26,54 @@ fn main() {
         std::process::exit(1);
     }
 
+    match Command::parse(command_str) {
+        Ok(cmd) => {
     let content = fs::read_to_string(&file_path).expect("Could not read file");
-
-    let output = parse_command_output(command, &content);
-
+            let output = parse_command_output(cmd, &content);
     println!("{}", output.trim_end());
+        },
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            std::process::exit(1);
+        }
+    }
 }
 
-fn parse_command_output(command: &str, content: &str) -> String {
+impl Command {
+    fn variants() -> String {
+        format!("cargo-rustc-cfg | cargo-rustc-check-cfg")
+    }
+
+    fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "rustc-cfg" => Ok(Command::RustcCfg),
+            "rustc-check-cfg" => Ok(Command::RustcCheckCfg),
+            _ => Err(format!(
+                "Unsupported command. Supported commands: {}",
+                Command::variants()
+            )),
+        }
+    }
+}
+
+fn parse_command_output(cmd: Command, content: &str) -> String {
     let mut output = String::new();
 
-    match command {
-        "rustc-cfg" => {
+    match cmd {
+        Command::RustcCfg => {
             for line in content.lines() {
                 if let Some(value) = line.strip_prefix("cargo:rustc-cfg=") {
                     output.push_str(&format!("--cfg='{}' ", value));
                 }
             }
-        }
-        "rustc-check-cfg" => {
+        },
+        Command::RustcCheckCfg => {
             for line in content.lines() {
                 if let Some(value) = line.strip_prefix("cargo:rustc-check-cfg=") {
                     output.push_str(&format!("--check-cfg='{}' ", value));
                 }
             }
-        }
-        _ => {
-            eprintln!("Unsupported command: {}", command);
-            std::process::exit(1);
-        }
+        },
     }
 
     output
@@ -70,11 +95,12 @@ mod tests {
         .unwrap();
 
         let content = fs::read_to_string(temp.path()).unwrap();
-        let output = parse_command_output("rustc-cfg", &content);
-        assert!(output.contains("--cfg='freebsd11'"));
-        assert!(output.contains("--cfg='libc_const_extern_fn'"));
+        let output = parse_command_output(Command::parse("rustc-cfg").unwrap(), &content);
+        assert_eq!(
+            output.trim(),
+            "--cfg='freebsd11' --cfg='libc_const_extern_fn'"
+        );
     }
-
     #[test]
     fn test_rustc_check_cfg_output() {
         let mut temp = NamedTempFile::new().unwrap();
@@ -85,9 +111,11 @@ mod tests {
         .unwrap();
 
         let content = fs::read_to_string(temp.path()).unwrap();
-        let output = parse_command_output("rustc-check-cfg", &content);
-        assert!(output.contains("--check-cfg='cfg(espidf_time32)'"));
-        assert!(output.contains("--check-cfg='cfg(libc_ctest)'"));
+        let output = parse_command_output(Command::parse("rustc-check-cfg").unwrap(), &content);
+        assert_eq!(
+            output.trim(),
+            "--check-cfg='cfg(espidf_time32)' --check-cfg='cfg(libc_ctest)'"
+        );
     }
 
     #[test]
@@ -104,16 +132,16 @@ mod tests {
 
         let content = fs::read_to_string(temp.path()).unwrap();
 
-        let cfg_output = parse_command_output("rustc-cfg", &content);
+        let cfg_output = parse_command_output(Command::parse("rustc-cfg").unwrap(), &content);
         assert_eq!(
             cfg_output.trim(),
             "--cfg='freebsd11' --cfg='libc_const_extern_fn'"
         );
 
-        let check_cfg_output = parse_command_output("rustc-check-cfg", &content);
+        let check_cfg_output = parse_command_output(Command::parse("rustc-check-cfg").unwrap(), &content);
         assert_eq!(
             check_cfg_output.trim(),
             "--check-cfg='cfg(libc_ctest)' --check-cfg='cfg(target_arch,values(\"mips64r6\"))'"
         );
-    }
+}
 }

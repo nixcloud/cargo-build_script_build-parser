@@ -6,7 +6,9 @@ This is useful when integrating crates like `libc`, which emit configuration fla
 
     https://github.com/nixcloud/cargo-build_script_build-parser
 
-## 🔧 Features
+<https://doc.rust-lang.org/cargo/reference/build-scripts.html>
+
+## 🔧 Supported Features
 
 - Extracts `--cfg='...'` flags from `cargo:rustc-cfg=...`
 - Extracts `--check-cfg='...'` flags from `cargo:rustc-check-cfg=...`
@@ -14,6 +16,27 @@ This is useful when integrating crates like `libc`, which emit configuration fla
 - Simple command-line interface
 - Tests included
 - Distributed as a [Nix Flake](#flake-usage)
+
+## 🔧 Ignored Features
+
+    cargo:rerun-if-changed
+    cargo:rerun-if-env-changed
+    cargo:rerun-if-changed-bin
+    cargo:rerun-if-changed-glob
+    cargo:rerun-if-changed-dir
+    cargo:rerun-if-changed-recursive
+    cargo:rerun-if-changed-env
+
+## 🔧 Missing Features
+
+    cargo:rustc-link-lib
+    cargo:rustc-link-search
+    cargo:rustc-flags
+    cargo:rustc-env
+    cargo:rustc-cdylib-link-arg
+    cargo:rustc-bin-link-arg
+    cargo:rustc-link-arg-bin
+    cargo:warning
 
 ## 💡 Example
 

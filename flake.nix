@@ -28,7 +28,6 @@
             rust-bin.stable."1.87.0".default
             cargo
             packages.default
-            
           ];
         };
       }
