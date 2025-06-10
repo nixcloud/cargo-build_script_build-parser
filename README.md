@@ -8,14 +8,17 @@ This is useful when integrating crates like `libc`, which emit configuration fla
 
 <https://doc.rust-lang.org/cargo/reference/build-scripts.html>
 
-## 🔧 Supported Features
-
-- Extracts `--cfg='...'` flags from `cargo:rustc-cfg=...`
-- Extracts `--check-cfg='...'` flags from `cargo:rustc-check-cfg=...`
 - Outputs all flags as a single command-line string
 - Simple command-line interface
 - Tests included
 - Distributed as a [Nix Flake](#flake-usage)
+
+## 🔧 Supported Features
+
+    cargo-cfg
+    cargo-check-cfg
+    cargo:rustc-env
+    cargo:warning
 
 ## 🔧 Ignored Features
 
@@ -32,17 +35,15 @@ This is useful when integrating crates like `libc`, which emit configuration fla
     cargo:rustc-link-lib
     cargo:rustc-link-search
     cargo:rustc-flags
-    cargo:rustc-env
     cargo:rustc-cdylib-link-arg
     cargo:rustc-bin-link-arg
     cargo:rustc-link-arg-bin
-    cargo:warning
 
 ## 💡 Example
 
 Simply run:
 
-    nix run .#default -- --tool cargo --command rustc-cfg ./test/output1
+    nix run .#default -- test/output1 rustc-arguments
 
 Given an input file `output.txt` with the following content:
 
@@ -51,23 +52,22 @@ Given an input file `output.txt` with the following content:
     cargo:rustc-check-cfg=cfg(freebsd11)
     cargo:rustc-check-cfg=cfg(libc_ctest)
 
-    nix run .#default -- --tool cargo --command rustc-cfg output.txt
+### Extract rustc-arguments
 
-### Extract `--cfg` flags
-
-    parse-build --tool cargo --command rustc-cfg output.txt
+    nix run .#default -- output.txt rustc-arguments
 
 Output:
 
-    --cfg='freebsd11' --cfg='libc_const_extern_fn'
+    --cfg='libc_const_extern_fn' --cfg='freebsd11' --check-cfg='cfg(espidf_time32)' --check-cfg='cfg(target_arch,values("mips64r6"))'
 
-### Extract --check-cfg flags
+### Extract environment-variables
 
-    parse-build --tool cargo --command rustc-check-cfg output.txt
+    parse-build test/output1 environment-variables
 
 Output:
 
-    --check-cfg='cfg(freebsd11)' --check-cfg='cfg(libc_ctest)'
+    VAR=VALUE
+    VAR2=
 
 # 🚀 Installation
 
