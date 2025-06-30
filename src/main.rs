@@ -37,8 +37,8 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
         let (command, arg) = parse(line_number, line)?;
         match command.as_str() {
             // rustc
-            "rustc-cfg" => rustc_arguments.push(format!("--cfg={}", arg)),
-            "rustc-check-cfg" => rustc_arguments.push(format!("--check-cfg={}", arg)),
+            "rustc-cfg" => rustc_arguments.push(format!("--cfg '{}'", arg)),
+            "rustc-check-cfg" => rustc_arguments.push(format!("--check-cfg '{}'", arg)),
 
             // env
             "rustc-env" => environment_variables.push(format!("{}", arg)),

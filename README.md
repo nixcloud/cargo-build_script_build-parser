@@ -58,7 +58,7 @@ Given an input file `output.txt` with the following content:
 
 Output:
 
-    --cfg='libc_const_extern_fn' --cfg='freebsd11' --check-cfg='cfg(espidf_time32)' --check-cfg='cfg(target_arch,values("mips64r6"))'
+    --cfg 'freebsd11' --cfg 'libc_const_extern_fn' --check-cfg 'cfg(espidf_time32)' --check-cfg 'cfg(target_arch,values("mips64r6"))'
 
 ### Extract environment-variables
 

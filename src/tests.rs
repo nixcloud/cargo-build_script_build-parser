@@ -19,7 +19,7 @@ mod tests {
         let output = handle_content(Command::RustcArguments, content).unwrap();
         assert_eq!(
             output.trim(),
-            "--cfg=freebsd11 --cfg=libc_const_extern_fn"
+            "--cfg 'freebsd11' --cfg 'libc_const_extern_fn'"
         );
     }
 
