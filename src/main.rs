@@ -54,7 +54,8 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
             },
 
             // cargo:rustc-link-lib=static=sqlite3
-            "rustc-link-lib" => rustc_dynamic_arguments.push(format!("-l '{}'", arg)),
+            "rustc-link-lib" => rustc_arguments.push(format!("-l '{}'", arg)),
+
             // cargo:rustc-link-search=native=/build/tmp.X3Lovygu3U
             "rustc-link-search" => rustc_dynamic_arguments.push(format!("-L '{}'", arg)),
 
