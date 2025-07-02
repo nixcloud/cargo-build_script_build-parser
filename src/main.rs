@@ -60,6 +60,8 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
 
             // ignored  // cargo:lib_dir=/build/tmp.X3Lovygu3U
             "lib_dir" => {},
+            // ignored  // cargo:include=/build/libsqlite3-sys-0.31.0/sqlite3
+            "include" => {},
 
             // ignored
             "rerun-if-changed" => {},
