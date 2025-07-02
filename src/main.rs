@@ -14,8 +14,10 @@ struct Args {
 
 #[derive(clap::Subcommand)]
 enum Command {
-    #[clap(about = "Parse rustc arguments from cargo output")]
+    #[clap(about = "Parse rustc arguments from build.rs output")]
     RustcArguments,
+    #[clap(about = "Parse rustc arguments from build.rs output")]
+    RustcDynamicArguments,
     #[clap(about = "Parse environment variables from cargo output")]
     EnvironmentVariables,
 }
@@ -32,6 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::error::Error>> {
     let mut rustc_arguments: Vec<String> = vec![];
+    let mut rustc_dynamic_arguments: Vec<String> = vec![];
     let mut environment_variables: Vec<String> = vec![];
     for (line_number, line) in content.lines().enumerate() {
         let (command, arg) = parse(line_number, line)?;
@@ -43,10 +46,20 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
             // env
             "rustc-env" => environment_variables.push(format!("{}", arg)),
 
-            // warning
             "warning" => {
-                eprintln!("WARNING: {arg}");
+                eprintln!("\x1b[1;33mwarning\x1b[0m: {arg}");
             },
+            "error" => {
+                eprintln!("\x1b[1;31error\x1b[0m: {arg}");
+            },
+
+            // cargo:rustc-link-lib=static=sqlite3
+            "rustc-link-lib" => rustc_dynamic_arguments.push(format!("-l '{}'", arg)),
+            // cargo:rustc-link-search=native=/build/tmp.X3Lovygu3U
+            "rustc-link-search" => rustc_dynamic_arguments.push(format!("-L '{}'", arg)),
+
+            // ignored  // cargo:lib_dir=/build/tmp.X3Lovygu3U
+            "lib_dir" => {},
 
             // ignored
             "rerun-if-changed" => {},
@@ -58,8 +71,6 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
             "rerun-if-changed-env" => {},
 
             // fail
-            "rustc-link-lib" |
-            "rustc-link-search" |
             "rustc-flags" |
             "rustc-cdylib-link-arg" |
             "rustc-bin-link-arg" |
@@ -75,6 +86,7 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
 
     match c {
         Command::RustcArguments => Ok(format!("{}", rustc_arguments.join(" "))),
+        Command::RustcDynamicArguments => Ok(format!("{}", rustc_dynamic_arguments.join(" "))),
         Command::EnvironmentVariables => Ok(format!("{}", environment_variables.join("\n"))),
     }
 }

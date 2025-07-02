@@ -19,6 +19,16 @@ This is useful when integrating crates like `libc`, which emit configuration fla
     cargo-check-cfg
     cargo:rustc-env
     cargo:warning
+    cargo:error
+    cargo:rustc-link-lib
+    cargo:rustc-link-search
+
+## 🔧 Missing Features
+
+    cargo:rustc-flags
+    cargo:rustc-cdylib-link-arg
+    cargo:rustc-bin-link-arg
+    cargo:rustc-link-arg-bin
 
 ## 🔧 Ignored Features
 
@@ -29,15 +39,6 @@ This is useful when integrating crates like `libc`, which emit configuration fla
     cargo:rerun-if-changed-dir
     cargo:rerun-if-changed-recursive
     cargo:rerun-if-changed-env
-
-## 🔧 Missing Features
-
-    cargo:rustc-link-lib
-    cargo:rustc-link-search
-    cargo:rustc-flags
-    cargo:rustc-cdylib-link-arg
-    cargo:rustc-bin-link-arg
-    cargo:rustc-link-arg-bin
 
 ## 💡 Example
 
