@@ -56,9 +56,21 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
             // cargo:rustc-link-lib=static=sqlite3
             "rustc-link-lib" => rustc_arguments.push(format!("-l '{}'", arg)),
             // cargo:rustc-link-search=native=/build/tmp.X3Lovygu3U
-            "rustc-link-search" => rustc_propagated_arguments.push(format!("-L '{}'", arg)),
+            "rustc-link-search" => {
+                rustc_propagated_arguments.push(format!("-L '{}'", arg));
+                let re = Regex::new(r"^(.+)\s*=\s*(.+)$")
+                    .map_err(|e| format!("Regex error: {}", e))?;
+                if let Some(caps) = re.captures(&arg) {
+                    let mode = &caps[1];
+                    let _directory = &caps[2];
+                    rustc_arguments.push(format!("-L \"{}=$out\"", mode));
+                } else {
+                    return Err(format!("Unable to parse the line {line_number}: '{line}'").to_string().into())
+                }
+            },
+            // FIXME the lib_dir is probably implemented wrong here
             // cargo:lib_dir=/build/tmp.X3Lovygu3U
-            "lib_dir" => rustc_arguments.push(format!("-L $out")),
+            "lib_dir" => {}, //rustc_arguments.push(format!("-L $out")),
 
             // ignored  // cargo:include=/build/libsqlite3-sys-0.31.0/sqlite3
             "include" => {},
