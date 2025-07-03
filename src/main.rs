@@ -17,7 +17,7 @@ enum Command {
     #[clap(about = "Parse rustc arguments from build.rs output")]
     RustcArguments,
     #[clap(about = "Parse rustc arguments from build.rs output")]
-    RustcDynamicArguments,
+    RustcPropagatedArguments,
     #[clap(about = "Parse environment variables from cargo output")]
     EnvironmentVariables,
 }
@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::error::Error>> {
     let mut rustc_arguments: Vec<String> = vec![];
-    let mut rustc_dynamic_arguments: Vec<String> = vec![];
+    let mut rustc_propagated_arguments: Vec<String> = vec![];
     let mut environment_variables: Vec<String> = vec![];
     for (line_number, line) in content.lines().enumerate() {
         let (command, arg) = parse(line_number, line)?;
@@ -57,7 +57,7 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
             "rustc-link-lib" => rustc_arguments.push(format!("-l '{}'", arg)),
 
             // cargo:rustc-link-search=native=/build/tmp.X3Lovygu3U
-            "rustc-link-search" => rustc_dynamic_arguments.push(format!("-L '{}'", arg)),
+            "rustc-link-search" => rustc_propagated_arguments.push(format!("-L '{}'", arg)),
 
             // ignored  // cargo:lib_dir=/build/tmp.X3Lovygu3U
             "lib_dir" => {},
@@ -82,14 +82,14 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
             },
 
             _ => {
-                return Err(format!("Unexpected command: '{command}' on line: '{line_number}'").into())
+                return Err(format!("Unexpected command: 'cargo:{command}' on line: '{line_number}'").into())
             },
         }
     }
 
     match c {
         Command::RustcArguments => Ok(format!("{}", rustc_arguments.join(" "))),
-        Command::RustcDynamicArguments => Ok(format!("{}", rustc_dynamic_arguments.join(" "))),
+        Command::RustcPropagatedArguments => Ok(format!("{}", rustc_propagated_arguments.join(" "))),
         Command::EnvironmentVariables => Ok(format!("{}", environment_variables.join("\n"))),
     }
 }
