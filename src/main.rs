@@ -55,12 +55,11 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
 
             // cargo:rustc-link-lib=static=sqlite3
             "rustc-link-lib" => rustc_arguments.push(format!("-l '{}'", arg)),
-
             // cargo:rustc-link-search=native=/build/tmp.X3Lovygu3U
             "rustc-link-search" => rustc_propagated_arguments.push(format!("-L '{}'", arg)),
+            // cargo:lib_dir=/build/tmp.X3Lovygu3U
+            "lib_dir" => rustc_arguments.push(format!("-L $out")),
 
-            // ignored  // cargo:lib_dir=/build/tmp.X3Lovygu3U
-            "lib_dir" => {},
             // ignored  // cargo:include=/build/libsqlite3-sys-0.31.0/sqlite3
             "include" => {},
 
