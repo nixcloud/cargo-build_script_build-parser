@@ -89,10 +89,10 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                         return Err(format!("Unable to parse rustc-link-search argument at {line_number}: '{line}'").to_string().into())
                     }
                 },
-                // FIXME the lib_dir is probably implemented wrong here
-                // ignored // cargo:lib_dir=/build/tmp.X3Lovygu3U
-                "lib_dir" => {}, //rustc_arguments.push(format!("-L $out")),
     
+                // WIP
+                // cargo:root=/nix/store/jndiwzj2zslh1hm7gadhj1rngv7dpgsp-libz-sys-1_1_21-script_build_run-61b385027f328c5a
+                "root" => {},
                 // ignored // cargo:include=/build/libsqlite3-sys-0.31.0/sqlite3
                 "include" => {},
                 // ignored // cargo:conf=OPENSSL_NO_SSL3_METHOD
@@ -101,6 +101,7 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                 "version_number" => {},
     
                 // ignored
+                "lib_dir" => {}, // cargo:lib_dir=/build/tmp.X3Lovygu3U
                 "rerun-if-changed" => {},
                 "rerun-if-env-changed" => {}, 
                 "rerun-if-changed-bin" => {},
@@ -109,7 +110,7 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                 "rerun-if-changed-recursive" => {},
                 "rerun-if-changed-env" => {},
     
-                // fail
+                // to be implemented (without usecase/example yet)
                 "rustc-flags" |
                 "rustc-cdylib-link-arg" |
                 "rustc-bin-link-arg" |

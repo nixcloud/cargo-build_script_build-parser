@@ -20,13 +20,15 @@ This is useful when integrating crates like `libc`, which emit configuration fla
     cargo:rustc-env
     cargo:warning
     cargo:error
+    cargo:rustc-link-search
+    cargo:rustc-link-lib
 
 ## 🔧 Experimental Features
 
-    cargo:rustc-link-lib
-    cargo:rustc-link-search
-    cargo:lib_dir
     cargo:include
+    cargo:root
+    cargo:conf
+    cargo:version_number
 
 ## 🔧 Missing Features
 
@@ -44,6 +46,7 @@ This is useful when integrating crates like `libc`, which emit configuration fla
     cargo:rerun-if-changed-dir
     cargo:rerun-if-changed-recursive
     cargo:rerun-if-changed-env
+    cargo:lib_dir
 
 ## 💡 Example
 
