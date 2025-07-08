@@ -19,8 +19,10 @@ enum Command {
     RustcArguments,
     #[clap(about = "Parse rustc arguments from build.rs output")]
     RustcPropagatedArguments,
-    #[clap(about = "Parse environment variables from cargo output")]
+    #[clap(about = "Parse environment variables from build.rs output")]
     EnvironmentVariables,
+    #[clap(about = "Parse propagated environment variables from build.rs output")]
+    EnvironmentPropagatedVariables,    
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -48,6 +50,7 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
     let mut rustc_arguments: Vec<String> = vec![];
     let mut rustc_propagated_arguments: Vec<String> = vec![];
     let mut environment_variables: Vec<String> = vec![];
+    let mut environment_propagated_variables: Vec<String> = vec![];
     for (line_number, line) in content.lines().enumerate() {
 
         let line = line.trim(); // Remove any trailing newline or whitespace
@@ -63,7 +66,7 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                 "rustc-cfg" => rustc_arguments.push(format!("--cfg '{}'", arg)),
                 "rustc-check-cfg" => rustc_arguments.push(format!("--check-cfg '{}'", arg)),
     
-                // env
+                // env - cargo:rustc-env=VAR=VALUE 
                 "rustc-env" => environment_variables.push(format!("{}", arg)),
     
                 "warning" => {
@@ -91,14 +94,41 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                 },
     
                 // WIP
-                // cargo:root=/nix/store/jndiwzj2zslh1hm7gadhj1rngv7dpgsp-libz-sys-1_1_21-script_build_run-61b385027f328c5a
-                "root" => {},
-                // ignored // cargo:include=/build/libsqlite3-sys-0.31.0/sqlite3
-                "include" => {},
-                // ignored // cargo:conf=OPENSSL_NO_SSL3_METHOD
-                "conf" => {},
+
+                // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
+                // cargo:include=/build/libsqlite3-sys-0.31.0/sqlite3
+                // DEP_{}_INCLUDE=value
+                "include" => {
+                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
+                    let key = format!("DEP_{}_INCLUDE", links);
+                    environment_propagated_variables.push(format!("{}='{}'", key, arg))
+                },
+                // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
+                // cargo:conf=OPENSSL_NO_SSL3_METHOD
+                // DEP_{}_CONF=value
+                "conf" => {
+                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
+                    let key = format!("DEP_{}_CONF", links);
+                    environment_propagated_variables.push(format!("{}='{}'", key, arg))
+                },
+
+                // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
                 // ignored // cargo:version_number=30400010
-                "version_number" => {},
+                // DEP_{}_VERSION_NUMBER=value
+                "version_number" => {
+                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
+                    let key = format!("DEP_{}_VERSION_NUMBER", links);
+                    environment_propagated_variables.push(format!("{}='{}'", key, arg))   
+                },
+
+                // cargo:root=/nix/store/jndiwzj2zslh1hm7gadhj1rngv7dpgsp-libz-sys-1_1_21-script_build_run-61b385027f328c5a
+                "root" => {
+
+                },
+
+                // DEP_CURL_STATIC in curl
+
+
     
                 // ignored
                 "lib_dir" => {}, // cargo:lib_dir=/build/tmp.X3Lovygu3U
@@ -110,11 +140,19 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                 "rerun-if-changed-recursive" => {},
                 "rerun-if-changed-env" => {},
     
-                // to be implemented (without usecase/example yet)
+                // failing, to be implemented (without usecase/example yet)
+                "metadata" |
                 "rustc-flags" |
+                "rustc-link-arg" |
                 "rustc-cdylib-link-arg" |
                 "rustc-bin-link-arg" |
                 "rustc-link-arg-bin" |
+                "rustc-link-arg-cdylib" |
+                "rustc-link-arg-bins" |
+                "rustc-link-arg-tests" |
+                "rustc-link-arg-examples" |
+                "rustc-link-arg-benches" |
+                "static" |
                 _ => {
                     eprintln_document_with_error(content.clone(), line_number);
                     return Err(format!("Command: '{command}' on line: '{line_number}' not implemented yet!").into())
@@ -131,5 +169,6 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
         Command::RustcArguments => Ok(format!("{}", rustc_arguments.join(" "))),
         Command::RustcPropagatedArguments => Ok(format!("{}", rustc_propagated_arguments.join(" "))),
         Command::EnvironmentVariables => Ok(format!("{}", environment_variables.join("\n"))),
+        Command::EnvironmentPropagatedVariables => Ok(format!("{}", environment_propagated_variables.join("\n"))),
     }
 }
