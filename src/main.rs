@@ -56,7 +56,7 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
         let line = line.trim(); // Remove any trailing newline or whitespace
         let re = Regex::new(r"^cargo:([^=]+)\s*=\s*(.+)$")
             .map_err(|e| format!("Regex error: {}", e))?;
-    
+
         if let Some(caps) = re.captures(line) {
             let command = &caps[1];
             let arg = &caps[2];
@@ -93,8 +93,6 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                     }
                 },
     
-                // WIP
-
                 // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
                 // cargo:include=/build/libsqlite3-sys-0.31.0/sqlite3
                 // DEP_{}_INCLUDE=value
@@ -103,6 +101,14 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                     let key = format!("DEP_{}_INCLUDE", links);
                     environment_propagated_variables.push(format!("{}='{}'", key, arg))
                 },
+                // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
+                // cargo:root=/nix/store/jndiwzj2zslh1hm7gadhj1rngv7dpgsp-libz-sys-1_1_21-script_build_run-61b385027f328c5a
+                // DEP_{}_ROOT=value
+                "root" => {
+                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
+                    let key = format!("DEP_{}_ROOT", links);
+                    environment_propagated_variables.push(format!("{}='{}'", key, arg))
+                }, 
                 // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
                 // cargo:conf=OPENSSL_NO_SSL3_METHOD
                 // DEP_{}_CONF=value
@@ -121,16 +127,9 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                     environment_propagated_variables.push(format!("{}='{}'", key, arg))   
                 },
 
-                // cargo:root=/nix/store/jndiwzj2zslh1hm7gadhj1rngv7dpgsp-libz-sys-1_1_21-script_build_run-61b385027f328c5a
-                "root" => {
-
-                },
-
                 // DEP_CURL_STATIC in curl
-
-
     
-                // ignored
+                // ignored 
                 "lib_dir" => {}, // cargo:lib_dir=/build/tmp.X3Lovygu3U
                 "rerun-if-changed" => {},
                 "rerun-if-env-changed" => {}, 
@@ -158,10 +157,9 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                     return Err(format!("Command: '{command}' on line: '{line_number}' not implemented yet!").into())
                 },
             }
-
         } else {
             eprintln_document_with_error(content.clone(), line_number);
-            return Err((format!("Unable to parse the line {line_number}: '{line}'").to_string()).into())
+            return Err((format!("Unknown command to parse on line {line_number}: '{line}'").to_string()).into())
         };
     }
 
