@@ -119,7 +119,7 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                 },
 
                 // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
-                // ignored // cargo:version_number=30400010
+                // cargo:version_number=30400010
                 // DEP_{}_VERSION_NUMBER=value
                 "version_number" => {
                     let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
@@ -127,9 +127,16 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                     environment_propagated_variables.push(format!("{}='{}'", key, arg))   
                 },
 
-                // DEP_CURL_STATIC in curl
+                // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
+                // cargo:static=1
+                // DEP_{}_STATIC=1
+                "static" => {
+                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
+                    let key = format!("DEP_{}_STATIC", links);
+                    environment_propagated_variables.push(format!("{}='{}'", key, arg))
+                },
     
-                // ignored 
+                // intentionally ignored 
                 "lib_dir" => {}, // cargo:lib_dir=/build/tmp.X3Lovygu3U
                 "rerun-if-changed" => {},
                 "rerun-if-env-changed" => {}, 
@@ -151,7 +158,6 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                 "rustc-link-arg-tests" |
                 "rustc-link-arg-examples" |
                 "rustc-link-arg-benches" |
-                "static" |
                 _ => {
                     eprintln_document_with_error(content.clone(), line_number);
                     return Err(format!("Command: '{command}' on line: '{line_number}' not implemented yet!").into())

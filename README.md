@@ -15,29 +15,23 @@ This is useful when integrating crates like `libc`, which emit configuration fla
 
 ## 🔧 Supported Features
 
-    cargo-cfg
-    cargo-check-cfg
+    cargo:cargo-cfg
+    cargo:cargo-check-cfg
     cargo:rustc-env
     cargo:warning
     cargo:error
     cargo:rustc-link-search
     cargo:rustc-link-lib
-
-## 🔧 Experimental Features
-
+    cargo:version_number
     cargo:include
     cargo:root
     cargo:conf
     cargo:version_number
+    cargo:static
 
-## 🔧 Missing Features
+## 🔧 Experimental Features
 
-    cargo:rustc-flags
-    cargo:rustc-cdylib-link-arg
-    cargo:rustc-bin-link-arg
-    cargo:rustc-link-arg-bin
-
-## 🔧 Ignored Features
+## 🔧 Intentionally Ignored Features
 
     cargo:rerun-if-changed
     cargo:rerun-if-env-changed
@@ -47,6 +41,13 @@ This is useful when integrating crates like `libc`, which emit configuration fla
     cargo:rerun-if-changed-recursive
     cargo:rerun-if-changed-env
     cargo:lib_dir
+
+## 🔧 Missing Features
+
+    cargo:rustc-flags
+    cargo:rustc-cdylib-link-arg
+    cargo:rustc-bin-link-arg
+    cargo:rustc-link-arg-bin
 
 ## 💡 Example
 
@@ -77,6 +78,26 @@ Output:
 
     VAR=VALUE
     VAR2=
+
+# Hacking
+
+When traditional cargo executes build.rs scripts it stores the output of each in this folder structure:
+
+    du -a target/ | grep output | grep -v '.finger'
+    4       target/debug/build/openssl-sys-bf6c2c38618f44c9/root-output
+    8       target/debug/build/openssl-sys-bf6c2c38618f44c9/output
+    4       target/debug/build/parking_lot_core-7bae69a33df63e20/root-output
+    4       target/debug/build/parking_lot_core-7bae69a33df63e20/output
+    4       target/debug/build/generic-array-39173d8ec8bd3f99/root-output
+    4       target/debug/build/generic-array-39173d8ec8bd3f99/output
+    4       target/debug/build/im-rc-723454c6ae50b5e6/root-output
+    4       target/debug/build/im-rc-723454c6ae50b5e6/output
+    4       target/debug/build/pulldown-cmark-1b80d253c6640a7e/root-output
+    ...
+
+So look at the *./output files and filter them with:
+
+    cat target/debug/build/openssl-sys-bf6c2c38618f44c9/output | grep '^cargo:'
 
 # 🚀 Installation
 
