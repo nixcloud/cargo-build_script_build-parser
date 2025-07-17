@@ -10,7 +10,9 @@ mod tests;
 struct Args {
     #[clap(subcommand)]
     command: Command,
-    file_path: String,
+    in_path: String,
+    #[clap(long)]
+    out_path: Option<PathBuf>,
 }
 
 #[derive(clap::Subcommand)]
@@ -21,20 +23,57 @@ enum Command {
     RustcPropagatedArguments,
     #[clap(about = "Parse environment variables from build.rs output")]
     EnvironmentVariables,
+    #[clap(about = "Writes 3 files into path")]
+    WriteResults,
+}
+
+#[derive(Debug)]
+struct TheResult {
+    rustc_arguments: Vec<String>,
+    rustc_propagated_arguments: Vec<String>,
+    environment_variables: Vec<String>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    let content = fs::read_to_string(PathBuf::from(&args.file_path)).expect("Could not read file");
-    match handle_content(args.command, content) {
-        Ok(out) => println!("{out}"),
+    let input = fs::read_to_string(PathBuf::from(&args.in_path)).expect("Could not read file");
+    match handle_content(input) {
+        Ok(out) => {
+            match args.command {
+                Command::RustcArguments => {
+                    println!("{}", out.rustc_arguments.join(" "));
+                },
+                Command::RustcPropagatedArguments => {
+                    println!("{}", out.rustc_propagated_arguments.join(" "));
+                },
+                Command::EnvironmentVariables => {
+                    println!("{}", out.environment_variables.join("\n"));
+                },
+                Command::WriteResults => {
+                    let out_path = args.out_path
+                        .as_ref()
+                        .expect("`--out-path` must be provided when using WriteResults");
+        
+                    let rustc_arguments_path = PathBuf::from(out_path).join("rustc-arguments");
+                    std::fs::write(rustc_arguments_path, out.rustc_arguments.join(" ")).expect("Unable to write data to file");
+        
+                    let rustc_propagated_arguments_path = PathBuf::from(out_path).join("rustc-propagated-arguments");
+                    std::fs::write(rustc_propagated_arguments_path, out.rustc_propagated_arguments.join(" ")).expect("Unable to write data to file");
+        
+                    let environment_variables_path = PathBuf::from(out_path).join("environment-variables");
+                    std::fs::write(environment_variables_path, out.environment_variables.join("\n")).expect("Unable to write data to file");
+                    
+                    println!("Successfully created files for nix to process from build.rs output in '{}'", out_path.display());
+                },
+            };
+        },
         Err(e) => return Err(e)
     }
     Ok(())
 }
 
-fn eprintln_document_with_error(content: String, error_line: usize) {
-    for (line_number, line) in content.lines().enumerate() {
+fn eprintln_document_with_error(input: String, error_line: usize) {
+    for (line_number, line) in input.lines().enumerate() {
         let formatted_line_number = format!("{:3}   ", line_number);
         if line_number == error_line {
             eprintln!("> {} {}", formatted_line_number, line.red());
@@ -44,11 +83,16 @@ fn eprintln_document_with_error(content: String, error_line: usize) {
     }
 }
 
-fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::error::Error>> {
+fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>> {
     let mut rustc_arguments: Vec<String> = vec![];
     let mut rustc_propagated_arguments: Vec<String> = vec![];
     let mut environment_variables: Vec<String> = vec![];
-    for (line_number, line) in content.lines().enumerate() {
+    for (line_number, line) in input.lines().enumerate() {
+
+        let trimmed_line = line.trim();
+        if !trimmed_line.starts_with("cargo:") {
+            continue;
+        }
 
         let line = line.trim(); // Remove any trailing newline or whitespace
         let re = Regex::new(r"^cargo:([^=]+)\s*=\s*(.+)$")
@@ -72,7 +116,7 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                         let val = &caps[2];
                         environment_variables.push(format!("{}='{}'", key, val))
                     } else {
-                        eprintln_document_with_error(content.clone(), line_number);
+                        eprintln_document_with_error(input.clone(), line_number);
                         return Err(format!("Unable to parse rustc-link-search argument at {line_number}: '{line}'").to_string().into())
                     }
                 },
@@ -96,7 +140,7 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                         let _directory = &caps[2];
                         rustc_arguments.push(format!("-L \"{}=$out\"", mode));
                     } else {
-                        eprintln_document_with_error(content.clone(), line_number);
+                        eprintln_document_with_error(input.clone(), line_number);
                         return Err(format!("Unable to parse rustc-link-search argument at {line_number}: '{line}'").to_string().into())
                     }
                 },
@@ -167,19 +211,22 @@ fn handle_content(c: Command, content: String) -> Result<String, Box<dyn std::er
                 "rustc-link-arg-examples" |
                 "rustc-link-arg-benches" |
                 _ => {
-                    eprintln_document_with_error(content.clone(), line_number);
+                    eprintln_document_with_error(input.clone(), line_number);
                     return Err(format!("Command: '{command}' on line: '{line_number}' not implemented yet!").into())
                 },
             }
         } else {
-            eprintln_document_with_error(content.clone(), line_number);
+            eprintln_document_with_error(input.clone(), line_number);
             return Err((format!("Unknown command to parse on line {line_number}: '{line}'").to_string()).into())
         };
     }
 
-    match c {
-        Command::RustcArguments => Ok(format!("{}", rustc_arguments.join(" "))),
-        Command::RustcPropagatedArguments => Ok(format!("{}", rustc_propagated_arguments.join(" "))),
-        Command::EnvironmentVariables => Ok(format!("{}", environment_variables.join("\n"))),
-    }
+    let the_result = TheResult {
+        rustc_arguments,
+        rustc_propagated_arguments,
+        environment_variables,
+    };
+
+    Ok(the_result)
+    
 }

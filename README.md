@@ -49,22 +49,9 @@ This is useful when integrating crates like `libc`, which emit configuration fla
     cargo:rustc-bin-link-arg
     cargo:rustc-link-arg-bin
 
-## 💡 Example
-
-Simply run:
-
-    nix run .#default -- test/output1 rustc-arguments
-
-Given an input file `output.txt` with the following content:
-
-    cargo:rustc-cfg=freebsd11
-    cargo:rustc-cfg=libc_const_extern_fn
-    cargo:rustc-check-cfg=cfg(freebsd11)
-    cargo:rustc-check-cfg=cfg(libc_ctest)
-
 ### Extract rustc-arguments
 
-    nix run .#default -- output.txt rustc-arguments
+    nix run .#default -- test/output1 rustc-arguments
 
 Output:
 
@@ -72,12 +59,35 @@ Output:
 
 ### Extract environment-variables
 
-    parse-build test/output1 environment-variables
+    nix run .#default -- test/output1 environment-variables
 
 Output:
 
     VAR=VALUE
     VAR2=
+
+### Extract rustc-propagated-arguments
+
+    nix run .#default -- test/output3 rustc-propagated-arguments
+
+Output:
+
+    warning: In file included from /nix/store/x4cz3spvw0bwwz5sjsdn2qm4f89rcryn-glibc-2.40-66-dev/include/bits/libc-header-start.h:33,
+    warning: from /nix/store/x4cz3spvw0bwwz5sjsdn2qm4f89rcryn-glibc-2.40-66-dev/include/stdio.h:28,
+    warning: from sqlite3/sqlite3.c:14884:
+    warning: /nix/store/x4cz3spvw0bwwz5sjsdn2qm4f89rcryn-glibc-2.40-66-dev/include/features.h:422:4: warning: #warning _FORTIFY_SOURCE requires compiling with optimization (-O) [-Wcpp]
+    warning: 422 | #  warning _FORTIFY_SOURCE requires compiling with optimization (-O)
+    warning: |    ^~~~~~~
+    -L 'native=${rust-embed-8_6_0-50d2bdadc507cf36}'
+
+### Writing these files
+
+    nix run .#default -- test/output1 --out-path out/ write-results
+
+Output
+
+    warning: This is a custom build warning from build.rs!
+    Successfully created files for nix to process from build.rs output in 'out/'
 
 # Hacking
 
