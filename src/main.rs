@@ -19,7 +19,7 @@ struct Args {
 enum Command {
     #[clap(about = "Parse rustc arguments from build.rs output")]
     RustcArguments,
-    #[clap(about = "Parse rustc arguments from build.rs output")]
+    #[clap(about = "Parse rustc arguments, which propagate the dependency tree, from build.rs output")]
     RustcPropagatedArguments,
     #[clap(about = "Parse environment variables from build.rs output")]
     EnvironmentVariables,
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let environment_variables_path = PathBuf::from(out_path).join("environment-variables");
                     std::fs::write(environment_variables_path, out.environment_variables.join("\n")).expect("Unable to write data to file");
                     
-                    println!("Successfully created files for nix to process from build.rs output in '{}'", out_path.display());
+                    println!("build.rs related nix files written to '{}'", out_path.display());
                 },
             };
         },
@@ -147,7 +147,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
     
                 // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
                 // cargo:include=/build/libsqlite3-sys-0.31.0/sqlite3
-                // DEP_{}_INCLUDE=value
+                // DEP_{}_INCLUDE='value'
                 "include" => {
                     let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
                     let key = format!("DEP_{}_INCLUDE", links);
@@ -155,7 +155,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 },
                 // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
                 // cargo:root=/nix/store/jndiwzj2zslh1hm7gadhj1rngv7dpgsp-libz-sys-1_1_21-script_build_run-61b385027f328c5a
-                // DEP_{}_ROOT=value
+                // DEP_{}_ROOT='value'
                 "root" => {
                     let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
                     let key = format!("DEP_{}_ROOT", links);
@@ -163,7 +163,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 }, 
                 // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
                 // cargo:conf=OPENSSL_NO_SSL3_METHOD
-                // DEP_{}_CONF=value
+                // DEP_{}_CONF='value'
                 "conf" => {
                     let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
                     let key = format!("DEP_{}_CONF", links);
@@ -172,7 +172,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
 
                 // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
                 // cargo:version_number=30400010
-                // DEP_{}_VERSION_NUMBER=value
+                // DEP_{}_VERSION_NUMBER='value'
                 "version_number" => {
                     let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
                     let key = format!("DEP_{}_VERSION_NUMBER", links);
@@ -181,7 +181,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
 
                 // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
                 // cargo:static=1
-                // DEP_{}_STATIC=1
+                // DEP_{}_STATIC='1'
                 "static" => {
                     let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
                     let key = format!("DEP_{}_STATIC", links);
