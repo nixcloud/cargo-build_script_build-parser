@@ -83,6 +83,18 @@ fn eprintln_document_with_error(input: String, error_line: usize) {
     }
 }
 
+fn eprintln_document_with_warning(input: String, error_line: usize) {
+    eprintln!("{}", "The following build.rs 'cargo:' directive will be ignored:".yellow());
+    for (line_number, line) in input.lines().enumerate() {
+        let formatted_line_number = format!("{:3}   ", line_number);
+        if line_number == error_line {
+            eprintln!("> {} {}", formatted_line_number, line.yellow());
+        } else {
+            eprintln!("  {} {}", formatted_line_number, line);
+        }
+    }
+}
+
 fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>> {
     let mut rustc_arguments: Vec<String> = vec![];
     let mut rustc_propagated_arguments: Vec<String> = vec![];
@@ -152,7 +164,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                     let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
                     let key = format!("DEP_{}_INCLUDE", links);
                     environment_variables.push(format!("{}='{}'", key, arg))
-                },
+                },                
                 // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
                 // cargo:root=/nix/store/jndiwzj2zslh1hm7gadhj1rngv7dpgsp-libz-sys-1_1_21-script_build_run-61b385027f328c5a
                 // DEP_{}_ROOT='value'
@@ -209,10 +221,14 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 "rustc-link-arg-bins" |
                 "rustc-link-arg-tests" |
                 "rustc-link-arg-examples" |
-                "rustc-link-arg-benches" |
-                _ => {
+                "rustc-link-arg-benches"
+                => {
                     eprintln_document_with_error(input.clone(), line_number);
                     return Err(format!("Command: '{command}' on line: '{line_number}' not implemented yet!").into())
+                }
+                _ => {
+                    eprintln_document_with_warning(input.clone(), line_number);
+                    continue
                 },
             }
         } else {

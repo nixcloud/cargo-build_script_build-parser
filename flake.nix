@@ -3,13 +3,16 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
+    fenix.url        = "github:nix-community/fenix";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, fenix }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        overlays = [];
+          overlays = [
+              fenix.overlay
+            ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
@@ -22,8 +25,11 @@
         };
         devShells.default = mkShell {
           buildInputs = [
-            #rust-bin.stable."1.87.0".default
-            #packages.default
+            fenix.packages.${system}.stable.rustc
+              fenix.packages.${system}.stable.cargo
+              fenix.packages.${system}.stable.rust-src
+              fenix.packages.${system}.stable.rustfmt
+              fenix.packages.${system}.stable.clippy
           ];
         };
       }

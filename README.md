@@ -24,6 +24,8 @@ Distributed as a [Nix Flake](#flake-usage)
 The motivation to keep this tool seperate from cargo is that when it changes I don't have to rebuild cargo all the time and building this is really fast!
 However, when the interface stabilizes it could be integated into cargo where it actually belongs - either as a standalone binary or as a part of cargo.
 
+The original implementation is in cargo `src/cargo/core/compiler/custom_build.rs` at `fn parse_metadata<'a>(`
+
 ## 🔧 Supported Features
 
     cargo:cargo-cfg

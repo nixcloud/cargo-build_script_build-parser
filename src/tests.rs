@@ -84,5 +84,11 @@ mod tests {
             "DEP_MYCRATE_CONF='OPENSSL_NO_SSL3_METHOD'\nDEP_MYCRATE_VERSION_NUMBER='30400010'\nDEP_MYCRATE_INCLUDE='/nix/store/k0699a27nkj4c2xn67bjcpfa08nqn9l4-openssl-3.4.1-dev/include'"
         );
     }
+
+    #[test]
+    fn test_output6() {
+        let content = fs::read_to_string("test/output6").unwrap();
+        let output = handle_content(content).unwrap();
+    }
     
 }
