@@ -1,6 +1,6 @@
 [package]
 name = "cargo-build_script_build-parser"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2024"
 
 [dev-dependencies]

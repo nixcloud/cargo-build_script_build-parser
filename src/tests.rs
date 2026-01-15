@@ -90,5 +90,25 @@ mod tests {
         let content = fs::read_to_string("test/output6").unwrap();
         let output = handle_content(content).unwrap();
     }
-    
+
+    #[test]
+    fn test_output7() {
+        unsafe {
+            env::set_var("CARGO_MANIFEST_LINKS", "MYCRATE");
+        }
+        let content = fs::read_to_string("test/output7").unwrap();
+        let output = handle_content(content).unwrap();
+        assert_eq!(
+            output.rustc_arguments.join(" ").trim(),
+            "-L \"native=$out\" -l 'sqlite3'"
+        );
+        assert_eq!(
+            output.rustc_propagated_arguments.join(" ").trim(),
+            "-L 'native=/nix/store/yfjzkkkyxcalyj7l1n4d4y6s81i65hmy-sqlite-3.48.0/lib'"
+        );
+        assert_eq!(
+            output.environment_variables.join("\n").trim(),
+            ""
+        );
+    }
 }

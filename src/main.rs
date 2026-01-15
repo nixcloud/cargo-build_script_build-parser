@@ -34,6 +34,20 @@ struct TheResult {
     environment_variables: Vec<String>,
 }
 
+pub trait EnvifyExt: ToString {
+    fn envify(&self) -> String;
+}
+
+impl EnvifyExt for String {
+    // function copied from cargo /home/nixos/cargo/src/cargo/core/compiler/mod.rs
+    fn envify(&self) -> String {
+        self.chars()
+            .flat_map(|c| c.to_uppercase())
+            .map(|c| if c == '-' { '_' } else { c })
+            .collect()
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let input = fs::read_to_string(PathBuf::from(&args.in_path)).expect("Could not read file");
@@ -129,7 +143,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                         environment_variables.push(format!("{}='{}'", key, val))
                     } else {
                         eprintln_document_with_error(input.clone(), line_number);
-                        return Err(format!("Unable to parse rustc-link-search argument at {line_number}: '{line}'").to_string().into())
+                        return Err(format!("Unable to parse rustc-env argument at {line_number}: '{line}'").to_string().into())
                     }
                 },
     
@@ -143,6 +157,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 // cargo:rustc-link-lib=static=sqlite3
                 "rustc-link-lib" => rustc_arguments.push(format!("-l '{}'", arg)),
                 // cargo:rustc-link-search=native=/build/tmp.X3Lovygu3U
+                // libsqlite3-sys> cargo:rustc-link-search=native=/nix/store/yfjzkkkyxcalyj7l1n4d4y6s81i65hmy-sqlite-3.48.0/lib
                 "rustc-link-search" => {
                     rustc_propagated_arguments.push(format!("-L '{}'", arg));
                     let re = Regex::new(r"^(.+)\s*=\s*(.+)$")
@@ -150,7 +165,11 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                     if let Some(caps) = re.captures(&arg) {
                         let mode = &caps[1];
                         let _directory = &caps[2];
-                        rustc_arguments.push(format!("-L \"{}=$out\"", mode));
+                        // if directory.starts_with("/nix/store") {
+                            // rustc_arguments.push(format!("-L \"{}={}\"", mode, directory));
+                        // } else {
+                            rustc_arguments.push(format!("-L \"{}=$out\"", mode));
+                        // }
                     } else {
                         eprintln_document_with_error(input.clone(), line_number);
                         return Err(format!("Unable to parse rustc-link-search argument at {line_number}: '{line}'").to_string().into())
@@ -161,7 +180,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 // cargo:include=/build/libsqlite3-sys-0.31.0/sqlite3
                 // DEP_{}_INCLUDE='value'
                 "include" => {
-                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
+                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().envify();
                     let key = format!("DEP_{}_INCLUDE", links);
                     environment_variables.push(format!("{}='{}'", key, arg))
                 },                
@@ -169,7 +188,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 // cargo:root=/nix/store/jndiwzj2zslh1hm7gadhj1rngv7dpgsp-libz-sys-1_1_21-script_build_run-61b385027f328c5a
                 // DEP_{}_ROOT='value'
                 "root" => {
-                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
+                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().envify();
                     let key = format!("DEP_{}_ROOT", links);
                     environment_variables.push(format!("{}='{}'", key, arg))
                 }, 
@@ -177,7 +196,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 // cargo:conf=OPENSSL_NO_SSL3_METHOD
                 // DEP_{}_CONF='value'
                 "conf" => {
-                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
+                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().envify();
                     let key = format!("DEP_{}_CONF", links);
                     environment_variables.push(format!("{}='{}'", key, arg))
                 },
@@ -186,7 +205,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 // cargo:version_number=30400010
                 // DEP_{}_VERSION_NUMBER='value'
                 "version_number" => {
-                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
+                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().envify();
                     let key = format!("DEP_{}_VERSION_NUMBER", links);
                     environment_variables.push(format!("{}='{}'", key, arg))   
                 },
@@ -195,7 +214,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 // cargo:static=1
                 // DEP_{}_STATIC='1'
                 "static" => {
-                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().to_string().to_uppercase();
+                    let links = std::env::var("CARGO_MANIFEST_LINKS").unwrap().envify();
                     let key = format!("DEP_{}_STATIC", links);
                     environment_variables.push(format!("{}='{}'", key, arg))
                 },
@@ -213,7 +232,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 // failing, to be implemented (without usecase/example yet)
                 "metadata" |
                 "rustc-flags" |
-                "rustc-link-arg" |
+                "rustc-link-arg" | // nushell: cargo:rustc-link-arg-benches=-rdynamic 
                 "rustc-cdylib-link-arg" |
                 "rustc-bin-link-arg" |
                 "rustc-link-arg-bin" |
