@@ -7,6 +7,7 @@ use std::path::PathBuf;
 mod tests;
 
 #[derive(clap::Parser)]
+#[clap(version = env!("CARGO_PKG_VERSION"))]
 struct Args {
     #[clap(subcommand)]
     command: Command,
@@ -27,6 +28,7 @@ enum Command {
     EnvironmentVariables,
     #[clap(about = "Writes 3 files into path")]
     WriteResults,
+
 }
 
 #[derive(Debug)]
@@ -295,7 +297,8 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 "rustc-link-arg-examples"      // https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-link-arg-examples
                 => {
                     eprintln_document_with_error(input.clone(), line_number);
-                    return Err(format!("Command: '{command}' on line: '{line_number}' not implemented yet!").into())
+                    let version = format!("{} version {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+                    return Err(format!("Command: '{command}' on line: '{line_number}' not implemented yet! {}", version).into())
                 }
                 _ => {
                     eprintln_document_with_warning(input.clone(), line_number);
