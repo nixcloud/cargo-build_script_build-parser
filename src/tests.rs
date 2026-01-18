@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use crate::handle_content;
     use std::env;
+    use std::fs;
     use std::io::Write;
     use tempfile::NamedTempFile;
-    use crate::handle_content;
 
     #[test]
     fn test_rustc_cfg_output() {
@@ -32,7 +32,7 @@ mod tests {
             "--cfg 'libc_const_extern_fn' --cfg 'freebsd11' --check-cfg 'cfg(espidf_time32)' --check-cfg 'cfg(target_arch,values(\"mips64r6\"))'"
         );
     }
-    
+
     #[test]
     fn test_output2() {
         let content = fs::read_to_string("test/output2").unwrap();
@@ -106,9 +106,10 @@ mod tests {
             output.rustc_propagated_arguments.join(" ").trim(),
             "-L 'native=/nix/store/yfjzkkkyxcalyj7l1n4d4y6s81i65hmy-sqlite-3.48.0/lib'"
         );
+        assert_eq!(output.environment_variables.join("\n").trim(), "");
         assert_eq!(
-            output.environment_variables.join("\n").trim(),
-            ""
+            output.rustc_link_arg_benches.join(" ").trim(),
+            "-C link-arg='-rdynamic'"
         );
     }
 }
