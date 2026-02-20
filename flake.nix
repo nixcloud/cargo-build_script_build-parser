@@ -16,10 +16,12 @@
               fenix.overlay
             ];
           };
+          build_rs_libnix = pkgs.callPackage ./default.nix {};
         in
         with pkgs;
         rec {
-          packages = { inherit cargo-libnix; };
+          # nix build .#build_rs_libnix
+          packages = { inherit build_rs_libnix; };
           devShells.default = mkShell {
             buildInputs = [
               # the toolchain used
