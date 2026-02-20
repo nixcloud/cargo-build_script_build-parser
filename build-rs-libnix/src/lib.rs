@@ -1,49 +1,24 @@
-use clap::Parser;
-use colored::*;
-use regex::Regex;
 use std::fs;
-use std::path::PathBuf;
+use std::path::Path;
+use regex::Regex;
+use colored::*;
+use anyhow::{Context, Result};
 
 mod tests;
 
-#[derive(clap::Parser)]
-#[clap(version = env!("CARGO_PKG_VERSION"))]
-struct Args {
-    #[clap(subcommand)]
-    command: Command,
-    in_path: String,
-    #[clap(long)]
-    out_path: Option<PathBuf>,
-}
-
-#[derive(clap::Subcommand)]
-enum Command {
-    #[clap(about = "Parse rustc arguments from build.rs output")]
-    RustcArguments,
-    #[clap(
-        about = "Parse rustc arguments, which propagate the dependency tree, from build.rs output"
-    )]
-    RustcPropagatedArguments,
-    #[clap(about = "Parse environment variables from build.rs output")]
-    EnvironmentVariables,
-    #[clap(about = "Writes 3 files into path")]
-    WriteResults,
-
-}
-
 #[derive(Debug)]
-struct TheResult {
-    rustc_arguments: Vec<String>,
-    rustc_propagated_arguments: Vec<String>,
-    environment_variables: Vec<String>,
-    metadata: Vec<String>,
-    rustc_flags: Vec<String>,
-    rustc_link_arg_cdylib: Vec<String>,
-    rustc_link_arg_bin: Vec<String>,
-    rustc_link_arg_bins: Vec<String>,
-    rustc_link_arg_tests: Vec<String>,
-    rustc_link_arg_examples: Vec<String>,
-    rustc_link_arg_benches: Vec<String>,
+pub struct TheResult {
+    pub rustc_arguments: Vec<String>,
+    pub rustc_propagated_arguments: Vec<String>,
+    pub environment_variables: Vec<String>,
+    pub metadata: Vec<String>,
+    pub rustc_flags: Vec<String>,
+    pub rustc_link_arg_cdylib: Vec<String>,
+    pub rustc_link_arg_bin: Vec<String>,
+    pub rustc_link_arg_bins: Vec<String>,
+    pub rustc_link_arg_tests: Vec<String>,
+    pub rustc_link_arg_examples: Vec<String>,
+    pub rustc_link_arg_benches: Vec<String>,
 }
 
 pub trait EnvifyExt: ToString {
@@ -60,65 +35,46 @@ impl EnvifyExt for String {
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = Args::parse();
-    let input = fs::read_to_string(PathBuf::from(&args.in_path)).expect("Could not read file");
+pub fn process_buildrs_output(in_path: &Path, out_dir: &Path) -> Result<()> {
+    let input = fs::read_to_string(in_path).expect("Could not read file");
     match handle_content(input) {
         Ok(out) => {
-            match args.command {
-                Command::RustcArguments => {
-                    println!("{}", out.rustc_arguments.join(" "));
-                }
-                Command::RustcPropagatedArguments => {
-                    println!("{}", out.rustc_propagated_arguments.join(" "));
-                }
-                Command::EnvironmentVariables => {
-                    println!("{}", out.environment_variables.join("\n"));
-                }
-                Command::WriteResults => {
-                    let out_path = args
-                        .out_path
-                        .as_ref()
-                        .expect("`--out-path` must be provided when using WriteResults");
+            let rustc_arguments_path = Path::new(&out_dir).join("rustc-arguments");
+            std::fs::write(rustc_arguments_path, out.rustc_arguments.join(" "))
+                .expect("Unable to write data to file");
 
-                    let rustc_arguments_path = PathBuf::from(out_path).join("rustc-arguments");
-                    std::fs::write(rustc_arguments_path, out.rustc_arguments.join(" "))
-                        .expect("Unable to write data to file");
+            let rustc_propagated_arguments_path =
+                Path::new(&out_dir).join("rustc-propagated-arguments");
+            std::fs::write(
+                rustc_propagated_arguments_path,
+                out.rustc_propagated_arguments.join(" "),
+            )
+            .expect("Unable to write data to file");
 
-                    let rustc_propagated_arguments_path =
-                        PathBuf::from(out_path).join("rustc-propagated-arguments");
-                    std::fs::write(
-                        rustc_propagated_arguments_path,
-                        out.rustc_propagated_arguments.join(" "),
-                    )
-                    .expect("Unable to write data to file");
+            let environment_variables_path =
+                Path::new(&out_dir).join("environment-variables");
+            std::fs::write(
+                environment_variables_path,
+                out.environment_variables.join("\n"),
+            )
+            .expect("Unable to write data to file");
 
-                    let environment_variables_path =
-                        PathBuf::from(out_path).join("environment-variables");
-                    std::fs::write(
-                        environment_variables_path,
-                        out.environment_variables.join("\n"),
-                    )
-                    .expect("Unable to write data to file");
+            let rustc_link_arg_benches_path =
+                Path::new(&out_dir).join("rustc-link-arg-benches");
+            std::fs::write(
+                rustc_link_arg_benches_path,
+                out.rustc_link_arg_benches.join(" "),
+            )
+            .expect("Unable to write data to file");
 
-                    let rustc_link_arg_benches_path =
-                        PathBuf::from(out_path).join("rustc-link-arg-benches");
-                    std::fs::write(
-                        rustc_link_arg_benches_path,
-                        out.rustc_link_arg_benches.join(" "),
-                    )
-                    .expect("Unable to write data to file");
-
-                    println!(
-                        "build.rs related nix files written to '{}'",
-                        out_path.display()
-                    );
-                }
-            };
+            println!(
+                "build.rs related nix files written to '{}'",
+                out_dir.display()
+            );
+            Ok(())
         }
-        Err(e) => return Err(e),
+        Err(e) => anyhow::bail!(e)
     }
-    Ok(())
 }
 
 fn eprintln_document_with_error(input: String, error_line: usize) {
@@ -147,17 +103,17 @@ fn eprintln_document_with_warning(input: String, error_line: usize) {
     }
 }
 
-fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>> {
+pub fn handle_content(input: String) -> Result<TheResult> {
     let mut rustc_arguments: Vec<String> = vec![];
     let mut rustc_propagated_arguments: Vec<String> = vec![];
     let mut environment_variables: Vec<String> = vec![];
-    let mut metadata: Vec<String> = vec![];
-    let mut rustc_flags: Vec<String> = vec![];
-    let mut rustc_link_arg_cdylib: Vec<String> = vec![];
-    let mut rustc_link_arg_bin: Vec<String> = vec![];
-    let mut rustc_link_arg_bins: Vec<String> = vec![];
-    let mut rustc_link_arg_tests: Vec<String> = vec![];
-    let mut rustc_link_arg_examples: Vec<String> = vec![];
+    let metadata: Vec<String> = vec![];
+    let rustc_flags: Vec<String> = vec![];
+    let rustc_link_arg_cdylib: Vec<String> = vec![];
+    let rustc_link_arg_bin: Vec<String> = vec![];
+    let rustc_link_arg_bins: Vec<String> = vec![];
+    let rustc_link_arg_tests: Vec<String> = vec![];
+    let rustc_link_arg_examples: Vec<String> = vec![];
     let mut rustc_link_arg_benches: Vec<String> = vec![];
 
     for (line_number, line) in input.lines().enumerate() {
@@ -168,7 +124,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
 
         let line = line.trim(); // Remove any trailing newline or whitespace
         let re =
-            Regex::new(r"^cargo:([^=]+)\s*=\s*(.+)$").map_err(|e| format!("Regex error: {}", e))?;
+            Regex::new(r"^cargo:([^=]+)\s*=\s*(.+)$").context("Regex error constructing cargo metadata regex")?;
 
         if let Some(caps) = re.captures(line) {
             let command = &caps[1];
@@ -182,14 +138,14 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 // env - cargo:rustc-env=VAR=VALUE 
                 "rustc-env" => {
                     let re = Regex::new(r"^(.+)\s*=\s*(.*)$")
-                    .map_err(|e| format!("Regex error: {}", e))?;
+                        .context("Regex error constructing cargo metadata regex")?;
                     if let Some(caps) = re.captures(&arg) {
                         let key = &caps[1];
                         let val = &caps[2];
                         environment_variables.push(format!("{}='{}'", key, val))
                     } else {
                         eprintln_document_with_error(input.clone(), line_number);
-                        return Err(format!("Unable to parse rustc-env argument at {line_number}: '{line}'").to_string().into())
+                        anyhow::bail!("Unable to parse rustc-env argument at {line_number}: '{line}'")
                     }
                 },
 
@@ -207,7 +163,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 "rustc-link-search" => {
                     rustc_propagated_arguments.push(format!("-L '{}'", arg));
                     let re = Regex::new(r"^(.+)\s*=\s*(.+)$")
-                        .map_err(|e| format!("Regex error: {}", e))?;
+                        .context("Regex error constructing cargo metadata regex")?;
                     if let Some(caps) = re.captures(&arg) {
                         let mode = &caps[1];
                         let _directory = &caps[2];
@@ -218,7 +174,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                         // }
                     } else {
                         eprintln_document_with_error(input.clone(), line_number);
-                        return Err(format!("Unable to parse rustc-link-search argument at {line_number}: '{line}'").to_string().into())
+                        anyhow::bail!("Unable to parse rustc-link-search argument at {line_number}: '{line}'")
                     }
                 },
                 // https://rurust.github.io/cargo-docs-ru/build-script.html#the-links-manifest-key
@@ -274,7 +230,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 "rustc-cdylib-link-arg" |
                 "rustc-link-arg-cdylib" => {
                     eprintln_document_with_error(input.clone(), line_number);
-                    return Err(format!("Command: '{command}' on line: '{line_number}' not implemented yet!").into())
+                    anyhow::bail!("Command: '{command}' on line: '{line_number}' not implemented yet!")
                 },
 
                 // intentionally ignored 
@@ -298,7 +254,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
                 => {
                     eprintln_document_with_error(input.clone(), line_number);
                     let version = format!("{} version {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
-                    return Err(format!("Command: '{command}' on line: '{line_number}' not implemented yet! {}", version).into())
+                    anyhow::bail!("Command: '{command}' on line: '{line_number}' not implemented yet! {version}")
                 }
                 _ => {
                     eprintln_document_with_warning(input.clone(), line_number);
@@ -307,10 +263,7 @@ fn handle_content(input: String) -> Result<TheResult, Box<dyn std::error::Error>
             }
         } else {
             eprintln_document_with_error(input.clone(), line_number);
-            return Err(
-                (format!("Unknown command to parse on line {line_number}: '{line}'").to_string())
-                    .into(),
-            );
+            anyhow::bail!("Unknown command to parse on line {line_number}: '{line}'")
         };
     }
 

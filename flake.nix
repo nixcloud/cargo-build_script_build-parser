@@ -1,42 +1,35 @@
 {
-  description = "The build-script-build parser flake";
-
+  description = "a flake to build build-rs-libnix";
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
-    fenix.url        = "github:nix-community/fenix";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    fenix.url   = "github:nix-community/fenix";
     flake-utils.url = "github:numtide/flake-utils";
   };
-
-  outputs = { self, nixpkgs, flake-utils, fenix }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-          overlays = [
+  outputs =
+  { self, nixpkgs, flake-utils, fenix } @ inputs:
+    flake-utils.lib.eachDefaultSystem
+      (system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [
               fenix.overlay
             ];
-        pkgs = import nixpkgs {
-          inherit system overlays;
-        };
-      in
-      with pkgs;
-      rec {
-        packages.default = pkgs.callPackage ./default.nix {};
-        apps.default = flake-utils.lib.mkApp {
-          drv = packages.default;
-        };
-        devShells.default = mkShell {
-          buildInputs = [
-            fenix.packages.${system}.stable.rustc
+          };
+        in
+        with pkgs;
+        rec {
+          packages = { inherit cargo-libnix; };
+          devShells.default = mkShell {
+            buildInputs = [
+              # the toolchain used
+              fenix.packages.${system}.stable.rustc
               fenix.packages.${system}.stable.cargo
               fenix.packages.${system}.stable.rust-src
               fenix.packages.${system}.stable.rustfmt
               fenix.packages.${system}.stable.clippy
-          ];
-        };
-      }
-    ) // {
-      # 🔁 expose overlay for importing into other flakes
-      overlay = final: prev: {
-        parse-build = prev.callPackage ./default.nix {};
-      };
-    };
+            ];
+          };
+        }
+      );
 }
