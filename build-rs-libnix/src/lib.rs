@@ -1,8 +1,8 @@
+use anyhow::{Context, Result};
+use colored::*;
+use regex::Regex;
 use std::fs;
 use std::path::Path;
-use regex::Regex;
-use colored::*;
-use anyhow::{Context, Result};
 
 mod tests;
 
@@ -51,16 +51,14 @@ pub fn process_buildrs_output(in_path: &Path, out_dir: &Path) -> Result<()> {
             )
             .expect("Unable to write data to file");
 
-            let environment_variables_path =
-                Path::new(&out_dir).join("environment-variables");
+            let environment_variables_path = Path::new(&out_dir).join("environment-variables");
             std::fs::write(
                 environment_variables_path,
                 out.environment_variables.join("\n"),
             )
             .expect("Unable to write data to file");
 
-            let rustc_link_arg_benches_path =
-                Path::new(&out_dir).join("rustc-link-arg-benches");
+            let rustc_link_arg_benches_path = Path::new(&out_dir).join("rustc-link-arg-benches");
             std::fs::write(
                 rustc_link_arg_benches_path,
                 out.rustc_link_arg_benches.join(" "),
@@ -73,7 +71,7 @@ pub fn process_buildrs_output(in_path: &Path, out_dir: &Path) -> Result<()> {
             );
             Ok(())
         }
-        Err(e) => anyhow::bail!(e)
+        Err(e) => anyhow::bail!(e),
     }
 }
 
@@ -123,8 +121,8 @@ pub fn handle_content(input: String) -> Result<TheResult> {
         }
 
         let line = line.trim(); // Remove any trailing newline or whitespace
-        let re =
-            Regex::new(r"^cargo:([^=]+)\s*=\s*(.+)$").context("Regex error constructing cargo metadata regex")?;
+        let re = Regex::new(r"^cargo:([^=]+)\s*=\s*(.+)$")
+            .context("Regex error constructing cargo metadata regex")?;
 
         if let Some(caps) = re.captures(line) {
             let command = &caps[1];

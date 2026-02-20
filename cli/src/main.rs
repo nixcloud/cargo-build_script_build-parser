@@ -1,13 +1,13 @@
+use anyhow::Result;
+use build_rs_libnix::handle_content;
 use clap::Parser;
 use std::fs;
 use std::path::{Path, PathBuf};
-use build_rs_libnix::handle_content;
-use anyhow::Result;
 
 #[derive(clap::Parser, Debug)]
 #[clap(
     name = "build-rs-libnix",
-    about = "Parse the output of a build.rs script for 'nix build'",
+    about = "Parse the output of a build.rs script for 'nix build'"
 )]
 
 pub struct BuildRsNixArgs {
@@ -21,7 +21,6 @@ pub struct BuildRsNixArgs {
 }
 
 fn main() -> Result<()> {
-
     let args = BuildRsNixArgs::parse();
     let input = fs::read_to_string(Path::new(&args.script_output)).expect("Could not read file");
     match handle_content(input) {
@@ -40,16 +39,14 @@ fn main() -> Result<()> {
             )
             .expect("Unable to write data to file");
 
-            let environment_variables_path =
-                Path::new(&out_dir).join("environment-variables");
+            let environment_variables_path = Path::new(&out_dir).join("environment-variables");
             std::fs::write(
                 environment_variables_path,
                 out.environment_variables.join("\n"),
             )
             .expect("Unable to write data to file");
 
-            let rustc_link_arg_benches_path =
-                Path::new(&out_dir).join("rustc-link-arg-benches");
+            let rustc_link_arg_benches_path = Path::new(&out_dir).join("rustc-link-arg-benches");
             std::fs::write(
                 rustc_link_arg_benches_path,
                 out.rustc_link_arg_benches.join(" "),
