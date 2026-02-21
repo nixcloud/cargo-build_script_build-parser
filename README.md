@@ -1,7 +1,8 @@
-# cargo-build_script_build-parser
+# build-rs-libnix
 
-When using 'cargo' to build a rust project it often uses `build.rs` probes to find libraries using `pkg-config` and the result
-is text like:
+In `cargo` projects often uses `build.rs` files to probe for libraries like `openssl` using `pkg-config`.
+
+Often one sees text like:
 
     cargo:rustc-cfg=libc_const_extern_fn
     cargo:rustc-cfg=freebsd11
@@ -11,7 +12,7 @@ is text like:
     cargo:rustc-env=VAR2=
     cargo:warning=This is a custom build warning from build.rs!
 
-This command-line utility consumes this output and builds arguments like `--cfg` and `--check-cfg` which are used from the nix code to build the application.
+This command-line utility `build-rs-libnix` consumes this output and builds arguments like `--cfg` and `--check-cfg` which are used from the nix code to build the application.
 
 This is useful when integrating crates like `libc`, which emit configuration flags during their build process. 
 
@@ -63,45 +64,14 @@ The original implementation is in cargo `src/cargo/core/compiler/custom_build.rs
     cargo:rustc-link-arg-bin
     ...
 
-### Extract rustc-arguments
-
-    nix run .#default -- test/output1 rustc-arguments
-
-Output:
-
-    --cfg 'freebsd11' --cfg 'libc_const_extern_fn' --check-cfg 'cfg(espidf_time32)' --check-cfg 'cfg(target_arch,values("mips64r6"))'
-
-### Extract environment-variables
-
-    nix run .#default -- test/output1 environment-variables
-
-Output:
-
-    VAR=VALUE
-    VAR2=
-
-### Extract rustc-propagated-arguments
-
-    nix run .#default -- test/output3 rustc-propagated-arguments
-
-Output:
-
-    warning: In file included from /nix/store/x4cz3spvw0bwwz5sjsdn2qm4f89rcryn-glibc-2.40-66-dev/include/bits/libc-header-start.h:33,
-    warning: from /nix/store/x4cz3spvw0bwwz5sjsdn2qm4f89rcryn-glibc-2.40-66-dev/include/stdio.h:28,
-    warning: from sqlite3/sqlite3.c:14884:
-    warning: /nix/store/x4cz3spvw0bwwz5sjsdn2qm4f89rcryn-glibc-2.40-66-dev/include/features.h:422:4: warning: #warning _FORTIFY_SOURCE requires compiling with optimization (-O) [-Wcpp]
-    warning: 422 | #  warning _FORTIFY_SOURCE requires compiling with optimization (-O)
-    warning: |    ^~~~~~~
-    -L 'native=${rust-embed-8_6_0-50d2bdadc507cf36}'
-
 ### Writing these files
 
-    nix run .#default -- test/output1 --out-path out/ write-results
+    cargo  run  -- --script-output build-rs-libnix/test/output1 --out-dir nix/
 
 Output
 
     warning: This is a custom build warning from build.rs!
-    Successfully created files for nix to process from build.rs output in 'out/'
+    build.rs related nix files written to 'nix/'
 
 # Hacking
 
@@ -128,13 +98,7 @@ So look at the *./output files and filter them with:
 This project is distributed as a Nix Flake.
 
 ```nix
-{
-  cargo-build_script_build-parser.url = "github:nixcloud/cargo-build_script_build-parser";
-
-  outputs = { self, cargo-build_script_build-parser, ... }: {
-    packages.x86_64-linux.cargo-build_script_build-parser = cargo-build_script_build-parser.packages.x86_64-linux.default;
-  };
-}
+build_rs_libnix_0_1_11 = pkgs.callPackage ./default.nix {};
 ```
 
 # 🧪 Testing
